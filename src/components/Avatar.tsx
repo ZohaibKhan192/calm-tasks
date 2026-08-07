@@ -6,10 +6,10 @@ export function Avatar({
   url,
   size = 24,
 }: {
-  name?: string | null;
-  email?: string | null;
-  url?: string | null;
-  size?: number;
+  name?: string | null | undefined;
+  email?: string | null | undefined;
+  url?: string | null | undefined;
+  size?: number | undefined;
 }) {
   const label = name || email || "Unassigned";
   if (url) {
