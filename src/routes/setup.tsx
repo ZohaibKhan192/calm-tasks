@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import {
   useCreateOrg,
-  useJoinOrg,
+  useJoinByCode,
   useMyOrgs,
   useMyPendingRequests,
   useOrg,
@@ -40,7 +40,7 @@ function SetupPage() {
   const { data: pending } = useMyPendingRequests();
   const { setOrgId } = useOrg();
   const createOrg = useCreateOrg();
-  const joinOrg = useJoinOrg();
+  const joinOrg = useJoinByCode();
   const [name, setName] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("PRIVATE");
   const [code, setCode] = useState("");
@@ -83,13 +83,13 @@ function SetupPage() {
     setError(null);
     setRequested(false);
     try {
-      const outcome = await joinOrg.mutateAsync(code.trim());
-      if (outcome === "PENDING") {
+      const { status, orgId } = await joinOrg.mutateAsync(code.trim());
+      if (status === "PENDING") {
         setRequested(true);
         setCode("");
         return;
       }
-      setOrgId(code.trim());
+      if (orgId) setOrgId(orgId);
       void navigate({ to: "/dashboard/tasks" });
     } catch {
       setError("That workspace code doesn't look right.");

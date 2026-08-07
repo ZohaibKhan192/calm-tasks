@@ -3,7 +3,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/Modal";
 import { supabase } from "@/integrations/supabase/client";
-import { useOrg, type Visibility } from "@/lib/org";
+import {
+  useMembers,
+  useOrg,
+  useRotateInviteCode,
+  useTransferOwnership,
+  type Visibility,
+} from "@/lib/org";
 
 export const Route = createFileRoute("/dashboard/settings")({
   head: () => ({
@@ -39,6 +45,45 @@ function SettingsPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const isOwner = org?.role === "OWNER";
+  const isManager = isOwner || org?.role === "ADMIN";
+
+  const { data: members } = useMembers(org?.id);
+  const rotate = useRotateInviteCode();
+  const transfer = useTransferOwnership();
+  const [transferTo, setTransferTo] = useState("");
+  const [confirmTransfer, setConfirmTransfer] = useState(false);
+
+  // Everyone except the current owner, who cannot receive their own workspace.
+  const transferCandidates = (members ?? []).filter((m) => m.user_id !== org?.owner_id);
+  const transferTarget = transferCandidates.find((m) => m.user_id === transferTo);
+
+  const rotateCode = () => {
+    setStatus(null);
+    setError(null);
+    rotate.mutate(org!.id, {
+      onSuccess: () => setStatus("New code generated. The old one no longer works."),
+      onError: () => setError("We couldn't generate a new code."),
+    });
+  };
+
+  const doTransfer = () => {
+    setStatus(null);
+    setError(null);
+    transfer.mutate(
+      { orgId: org!.id, toUserId: transferTo },
+      {
+        onSuccess: () => {
+          setConfirmTransfer(false);
+          setTransferTo("");
+          setStatus("Ownership transferred. You are now an admin.");
+        },
+        onError: () => {
+          setConfirmTransfer(false);
+          setError("We couldn't transfer ownership.");
+        },
+      },
+    );
+  };
 
   useEffect(() => setName(org?.name ?? ""), [org?.name]);
   useEffect(() => setVisibility(org?.visibility ?? "PRIVATE"), [org?.visibility]);
@@ -124,13 +169,25 @@ function SettingsPage() {
       </form>
 
       <div className="mt-8">
-        <p className="mb-2 text-xs text-muted-foreground">Workspace code</p>
-        <code className="block rounded-md border border-border bg-surface px-3 py-2 text-xs text-foreground">
-          {org?.id}
-        </code>
+        <p className="mb-2 text-xs text-muted-foreground">Invite code</p>
+        <div className="flex items-center gap-4">
+          <code className="flex-1 rounded-md border border-border bg-surface px-3 py-2 text-xs text-foreground">
+            {org?.invite_code}
+          </code>
+          {isManager && (
+            <button
+              type="button"
+              disabled={rotate.isPending}
+              onClick={rotateCode}
+              className="btn-base btn-ghost"
+            >
+              {rotate.isPending ? "Generating…" : "Regenerate"}
+            </button>
+          )}
+        </div>
         <p className="mt-2 text-xs text-muted-foreground">
           {org?.visibility === "PUBLIC"
-            ? "Anyone with this code joins immediately."
+            ? "Anyone with this code joins immediately. Regenerate it to cut off everyone who has the old one."
             : "People with this code have to be approved on the Team page."}
         </p>
       </div>
@@ -139,6 +196,46 @@ function SettingsPage() {
         <p className="mb-2 text-xs text-muted-foreground">Your role</p>
         <p className="text-sm text-foreground">{org?.role}</p>
       </div>
+
+      {isOwner && (
+        <div className="mt-8">
+          <p className="mb-2 text-xs text-muted-foreground">Transfer ownership</p>
+          {transferCandidates.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Invite someone else to this workspace first — ownership can only go to an existing
+              member.
+            </p>
+          ) : (
+            <div className="flex items-center gap-4">
+              <select
+                aria-label="New owner"
+                className="field"
+                value={transferTo}
+                onChange={(e) => setTransferTo(e.target.value)}
+              >
+                <option value="">Choose a member</option>
+                {transferCandidates.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.name || m.email}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={!transferTo}
+                onClick={() => setConfirmTransfer(true)}
+                className="btn-base btn-ghost"
+              >
+                Transfer
+              </button>
+            </div>
+          )}
+          <p className="mt-2 text-xs text-muted-foreground">
+            They become the owner and you become an admin. Only the owner can rename, change who
+            can join, or delete a workspace.
+          </p>
+        </div>
+      )}
 
       {status && <p className="mt-4 text-xs text-muted-foreground">{status}</p>}
       {error && <p className="mt-4 text-xs text-destructive">{error}</p>}
@@ -156,6 +253,35 @@ function SettingsPage() {
             This permanently removes the workspace and all of its tasks.
           </p>
         </div>
+      )}
+
+      {confirmTransfer && (
+        <Modal title="Transfer ownership" onClose={() => setConfirmTransfer(false)} width={380}>
+          <p className="text-sm text-foreground">
+            Make {transferTarget?.name || transferTarget?.email} the owner?
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            You will be demoted to admin and will no longer be able to rename, change visibility on,
+            or delete this workspace. Only the new owner can transfer it back.
+          </p>
+          <div className="mt-6 flex gap-4">
+            <button
+              type="button"
+              onClick={() => setConfirmTransfer(false)}
+              className="btn-base btn-ghost flex-1"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={transfer.isPending}
+              onClick={doTransfer}
+              className="btn-base btn-primary flex-1"
+            >
+              {transfer.isPending ? "Transferring…" : "Transfer"}
+            </button>
+          </div>
+        </Modal>
       )}
 
       {confirmDelete && (

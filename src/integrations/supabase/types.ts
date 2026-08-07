@@ -88,6 +88,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          invite_code: string
           name: string
           owner_id: string
           visibility: Database["public"]["Enums"]["org_visibility"]
@@ -95,6 +96,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          invite_code?: string
           name: string
           owner_id: string
           visibility?: Database["public"]["Enums"]["org_visibility"]
@@ -102,6 +104,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          invite_code?: string
           name?: string
           owner_id?: string
           visibility?: Database["public"]["Enums"]["org_visibility"]
@@ -190,9 +193,11 @@ export type Database = {
       approve_join_request: { Args: { _request: string }; Returns: undefined }
       is_org_manager: { Args: { _org: string }; Returns: boolean }
       is_org_member: { Args: { _org: string }; Returns: boolean }
-      join_org: { Args: { _org: string }; Returns: string }
+      join_by_code: { Args: { _code: string }; Returns: Json }
       reject_join_request: { Args: { _request: string }; Returns: undefined }
+      rotate_invite_code: { Args: { _org: string }; Returns: string }
       shares_org: { Args: { _user: string }; Returns: boolean }
+      transfer_ownership: { Args: { _org: string; _to: string }; Returns: undefined }
     }
     Enums: {
       app_role: "OWNER" | "ADMIN" | "MEMBER"

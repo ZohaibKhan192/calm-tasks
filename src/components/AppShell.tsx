@@ -137,13 +137,13 @@ function InvitePanel() {
           </p>
           <div className="mt-2 flex items-center gap-2">
             <code className="flex-1 truncate rounded-sm border border-border bg-surface px-2 py-1 text-xs text-foreground">
-              {org.id}
+              {org.invite_code}
             </code>
             <button
               type="button"
-              aria-label="Copy workspace code"
+              aria-label="Copy invite code"
               onClick={() => {
-                void navigator.clipboard.writeText(org.id);
+                void navigator.clipboard.writeText(org.invite_code);
                 setCopied(true);
               }}
               className="rounded-sm border border-border p-1 text-muted-foreground hover:bg-hover"

@@ -12,10 +12,11 @@ export type Org = {
   name: string;
   owner_id: string;
   visibility: Visibility;
+  invite_code: string;
   role: Role;
 };
 
-/** Result of join_org(): straight in, or waiting on a manager. */
+/** Result of join_by_code(): straight in, or waiting on a manager. */
 export type JoinOutcome = "JOINED" | "PENDING";
 
 export type JoinRequest = {
@@ -56,7 +57,7 @@ export function useMyOrgs() {
       if (ids.length === 0) return [];
       const { data: orgs, error: orgErr } = await supabase
         .from("organizations")
-        .select("id, name, owner_id, visibility")
+        .select("id, name, owner_id, visibility, invite_code")
         .in("id", ids)
         .order("created_at", { ascending: true });
       if (orgErr) throw orgErr;
@@ -164,18 +165,53 @@ export function useCreateOrg() {
   });
 }
 
-/** Asks to join. PUBLIC orgs return "JOINED"; PRIVATE ones file a request. */
-export function useJoinOrg() {
+/** Redeems an invite code. PUBLIC orgs join outright; PRIVATE ones file a request. */
+export function useJoinByCode() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (orgId: string): Promise<JoinOutcome> => {
-      const { data, error } = await supabase.rpc("join_org", { _org: orgId });
+    mutationFn: async (code: string): Promise<{ status: JoinOutcome; orgId: string }> => {
+      const { data, error } = await supabase.rpc("join_by_code", { _code: code });
       if (error) throw error;
-      return data === "JOINED" ? "JOINED" : "PENDING";
+      const result = data as { status?: string; org_id?: string } | null;
+      return {
+        status: result?.status === "JOINED" ? "JOINED" : "PENDING",
+        orgId: result?.org_id ?? "",
+      };
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["orgs"] });
       await qc.invalidateQueries({ queryKey: ["my-join-requests"] });
+    },
+  });
+}
+
+/** Invalidates the old code. Managers only; enforced in the function. */
+export function useRotateInviteCode() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (orgId: string): Promise<string> => {
+      const { data, error } = await supabase.rpc("rotate_invite_code", { _org: orgId });
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["orgs"] }),
+  });
+}
+
+/** Hands the workspace to another member; the outgoing owner becomes an ADMIN. */
+export function useTransferOwnership() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ orgId, toUserId }: { orgId: string; toUserId: string }) => {
+      const { error } = await supabase.rpc("transfer_ownership", {
+        _org: orgId,
+        _to: toUserId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["orgs"] });
+      await qc.invalidateQueries({ queryKey: ["members"] });
     },
   });
 }

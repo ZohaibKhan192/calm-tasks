@@ -19,22 +19,46 @@ export type Task = {
   updated_at: string;
 };
 
-export const PAGE_SIZE = 100;
+export const COLUMN_PAGE_SIZE = 50;
 
-export function useTasks(orgId?: string, page = 0) {
+/**
+ * One query per column.
+ *
+ * The board used to fetch a single page of all statuses and split it clientside,
+ * which silently dropped tasks: with more tasks than fit one page, a column
+ * showed only those that happened to fall inside it, and the counts lied.
+ * Filtering in the query means each column's total is its real total.
+ */
+export function useColumnTasks(orgId: string | undefined, status: Status, limit: number) {
   return useQuery({
-    queryKey: ["tasks", orgId, page],
+    queryKey: ["tasks", orgId, status, limit],
     enabled: !!orgId,
     queryFn: async () => {
-      const from = page * PAGE_SIZE;
       const { data, error, count } = await supabase
         .from("tasks")
         .select("*", { count: "exact" })
         .eq("org_id", orgId!)
+        .eq("status", status)
         .order("created_at", { ascending: false })
-        .range(from, from + PAGE_SIZE - 1);
+        .range(0, limit - 1);
       if (error) throw error;
       return { tasks: (data ?? []) as Task[], total: count ?? 0 };
+    },
+  });
+}
+
+/** Org-wide total, for the header count and the empty state. */
+export function useTaskCount(orgId?: string) {
+  return useQuery({
+    queryKey: ["tasks", orgId, "count"],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("org_id", orgId!);
+      if (error) throw error;
+      return count ?? 0;
     },
   });
 }
