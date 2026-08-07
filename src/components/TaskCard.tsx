@@ -35,20 +35,26 @@ export function DueDate({ value }: { value: string }) {
 export function TaskCard({
   task,
   members,
+  draggable = true,
   onOpen,
   onDragStart,
+  onDragEnd,
 }: {
   task: Task;
   members: Member[];
+  /** False for tasks the viewer may not move, so the drag never starts. */
+  draggable?: boolean;
   onOpen: () => void;
   onDragStart: () => void;
+  onDragEnd?: () => void;
 }) {
   const assignee = members.find((m) => m.user_id === task.assigned_to);
 
   return (
     <div
-      draggable
+      draggable={draggable}
       onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       onClick={onOpen}
       className="cursor-pointer rounded-md border border-border bg-background p-4 hover:bg-surface"
       style={{ borderLeft: `3px solid ${LEFT_BORDER[task.status]}` }}

@@ -50,34 +50,54 @@ function Column({
   label,
   orgId,
   members,
+  canDrag,
   onOpen,
   onDragStart,
+  onDragEnd,
   onDrop,
 }: {
   status: Status;
   label: string;
   orgId: string | undefined;
   members: Member[];
+  canDrag: (task: Task) => boolean;
   onOpen: (task: Task) => void;
   onDragStart: (task: Task) => void;
+  onDragEnd: () => void;
   onDrop: (status: Status) => void;
 }) {
   const [limit, setLimit] = useState(COLUMN_PAGE_SIZE);
+  const [over, setOver] = useState(false);
   const { data, isLoading } = useColumnTasks(orgId, status, limit);
   const tasks = data?.tasks ?? [];
   const total = data?.total ?? 0;
 
   return (
     <section
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={() => onDrop(status)}
-      className="max-h-[calc(100vh-220px)] min-w-[320px] max-w-[400px] flex-1 overflow-y-auto"
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!over) setOver(true);
+      }}
+      // dragleave also fires when the cursor moves onto a child, so only clear
+      // once the pointer has actually left the column.
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver(false);
+      }}
+      onDrop={() => {
+        setOver(false);
+        onDrop(status);
+      }}
+      className={`flex max-h-[calc(100vh-220px)] min-h-[320px] min-w-[320px] max-w-[400px] flex-1 flex-col overflow-y-auto rounded-md ${
+        over ? "bg-surface" : ""
+      }`}
     >
       <div className="flex items-center justify-between border-b border-border pb-2">
         <h2 className="text-sm font-semibold text-foreground">{label}</h2>
         <span className="text-xs text-muted-foreground">{total}</span>
       </div>
-      <div className="mt-4 flex flex-col gap-4">
+      {/* flex-1 makes the empty area below the cards part of the drop target,
+          otherwise a column with no tasks is only droppable on its header. */}
+      <div className="mt-4 flex flex-1 flex-col gap-4">
         {isLoading ? (
           <>
             <Skeleton className="h-24 w-full" />
@@ -89,10 +109,15 @@ function Column({
               key={task.id}
               task={task}
               members={members}
+              draggable={canDrag(task)}
               onOpen={() => onOpen(task)}
               onDragStart={() => onDragStart(task)}
+              onDragEnd={onDragEnd}
             />
           ))
+        )}
+        {!isLoading && tasks.length === 0 && (
+          <p className="text-xs text-muted-foreground">Drop a task here</p>
         )}
         {tasks.length < total && (
           <button
@@ -169,8 +194,10 @@ function TasksPage() {
               label={column.label}
               orgId={org?.id}
               members={members ?? []}
+              canDrag={canEdit}
               onOpen={setEditing}
               onDragStart={setDragged}
+              onDragEnd={() => setDragged(null)}
               onDrop={onDrop}
             />
           ))}
