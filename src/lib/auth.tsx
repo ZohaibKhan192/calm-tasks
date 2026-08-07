@@ -26,20 +26,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       if (next?.user) {
         const u = next.user;
-        setTimeout(() => {
-          void supabase.from("profiles").upsert(
-            {
-              id: u.id,
-              email: u.email ?? null,
-              name:
-                (u.user_metadata?.["full_name"] as string) ??
-                (u.user_metadata?.["name"] as string) ??
-                u.email ??
-                "User",
-              avatar_url: (u.user_metadata?.["avatar_url"] as string) ?? null,
-            },
-            { onConflict: "id" },
-          );
+        setTimeout(async () => {
+          try {
+            const { error } = await supabase.from("profiles").upsert(
+              {
+                id: u.id,
+                email: u.email ?? null,
+                name:
+                  (u.user_metadata?.["full_name"] as string) ??
+                  (u.user_metadata?.["name"] as string) ??
+                  u.email ??
+                  "User",
+                avatar_url: (u.user_metadata?.["avatar_url"] as string) ?? null,
+              },
+              { onConflict: "id" },
+            );
+            if (error) {
+              console.error("Failed to create/update profile:", error);
+            }
+          } catch (err) {
+            console.error("Profile creation error:", err);
+          }
         }, 0);
       }
     });
