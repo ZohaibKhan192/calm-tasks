@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { Modal } from "@/components/Modal";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/lib/org";
 
@@ -29,6 +30,8 @@ function SettingsPage() {
   const [name, setName] = useState(org?.name ?? "");
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const isOwner = org?.role === "OWNER";
 
   useEffect(() => setName(org?.name ?? ""), [org?.name]);
@@ -50,8 +53,12 @@ function SettingsPage() {
   };
 
   const destroy = async () => {
+    setDeleting(true);
+    setError(null);
     const { error: deleteError } = await supabase.from("organizations").delete().eq("id", org!.id);
     if (deleteError) {
+      setConfirmDelete(false);
+      setDeleting(false);
       setError("We couldn't delete this workspace.");
       return;
     }
@@ -101,13 +108,44 @@ function SettingsPage() {
 
       {isOwner && (
         <div className="mt-12 border-t border-border pt-6">
-          <button type="button" onClick={() => void destroy()} className="btn-base btn-danger">
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="btn-base btn-danger"
+          >
             Delete workspace
           </button>
           <p className="mt-2 text-xs text-muted-foreground">
             This permanently removes the workspace and all of its tasks.
           </p>
         </div>
+      )}
+
+      {confirmDelete && (
+        <Modal title="Delete workspace" onClose={() => setConfirmDelete(false)} width={380}>
+          <p className="text-sm text-foreground">Delete {org?.name}?</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            This permanently removes the workspace, its tasks, and every membership. It cannot be
+            undone.
+          </p>
+          <div className="mt-6 flex gap-4">
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(false)}
+              className="btn-base btn-ghost flex-1"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={() => void destroy()}
+              className="btn-base flex-1 border-transparent bg-destructive text-white"
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

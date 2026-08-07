@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { Skeleton } from "@/components/Skeleton";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,16 +32,28 @@ function TeamPage() {
   const { user } = useAuth();
   const { data: members, isLoading } = useMembers(org?.id);
   const qc = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
   const isManager = org?.role === "OWNER" || org?.role === "ADMIN";
 
   const changeRole = async (id: string, role: Role) => {
-    await supabase.from("memberships").update({ role }).eq("id", id);
+    setError(null);
+    const { error: updateError } = await supabase
+      .from("memberships")
+      .update({ role })
+      .eq("id", id);
+    if (updateError) {
+      setError("We couldn't change that role. You may not have permission.");
+    }
     await qc.invalidateQueries({ queryKey: ["members"] });
     await qc.invalidateQueries({ queryKey: ["orgs"] });
   };
 
   const remove = async (id: string) => {
-    await supabase.from("memberships").delete().eq("id", id);
+    setError(null);
+    const { error: deleteError } = await supabase.from("memberships").delete().eq("id", id);
+    if (deleteError) {
+      setError("We couldn't remove that member. You may not have permission.");
+    }
     await qc.invalidateQueries({ queryKey: ["members"] });
   };
 
@@ -48,6 +61,8 @@ function TeamPage() {
     <div>
       <h1 className="text-2xl font-semibold text-foreground">Team</h1>
       <p className="mt-2 text-xs text-muted-foreground">People in {org?.name}</p>
+
+      {error && <p className="mt-8 text-sm text-destructive">{error}</p>}
 
       <div className="mt-8 rounded-md border border-border">
         {isLoading ? (
