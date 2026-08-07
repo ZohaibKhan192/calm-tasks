@@ -9,7 +9,7 @@ const PRIORITIES: Priority[] = ["LOW", "MEDIUM", "HIGH"];
 export function TaskModal({
   task,
   members,
-  canDelete,
+  canEdit,
   saving,
   onClose,
   onSave,
@@ -17,7 +17,12 @@ export function TaskModal({
 }: {
   task?: Task | null;
   members: Member[];
-  canDelete: boolean;
+  /**
+   * False for a member viewing someone else's task: the same rule the tasks_update
+   * and tasks_delete policies enforce (author, ADMIN or OWNER). The modal becomes
+   * read-only rather than offering a Save button the database would reject.
+   */
+  canEdit: boolean;
   saving: boolean;
   onClose: () => void;
   onSave: (input: TaskInput) => void;
@@ -32,6 +37,7 @@ export function TaskModal({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) return;
     if (!title.trim()) {
       setError("Task name is required.");
       return;
@@ -47,7 +53,12 @@ export function TaskModal({
   };
 
   return (
-    <Modal title={task ? "Edit task" : "New task"} onClose={onClose}>
+    <Modal title={task ? (canEdit ? "Edit task" : "Task details") : "New task"} onClose={onClose}>
+      {!canEdit && (
+        <p className="mb-4 text-xs text-muted-foreground">
+          Only the person who created this task, an admin or the owner can change it.
+        </p>
+      )}
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div>
           <label htmlFor="title" className="mb-2 block text-xs text-muted-foreground">
@@ -59,6 +70,7 @@ export function TaskModal({
             placeholder="Enter task name"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            disabled={!canEdit}
           />
         </div>
 
@@ -72,6 +84,7 @@ export function TaskModal({
             placeholder="Add notes..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            disabled={!canEdit}
           />
         </div>
 
@@ -85,6 +98,7 @@ export function TaskModal({
               className="field"
               value={assignedTo}
               onChange={(e) => setAssignedTo(e.target.value)}
+              disabled={!canEdit}
             >
               <option value="">Unassigned</option>
               {members.map((m) => (
@@ -114,6 +128,7 @@ export function TaskModal({
             className="field"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
+            disabled={!canEdit}
           />
         </div>
 
@@ -128,6 +143,7 @@ export function TaskModal({
                   value={p}
                   checked={priority === p}
                   onChange={() => setPriority(p)}
+                  disabled={!canEdit}
                 />
                 {p}
               </label>
@@ -138,15 +154,21 @@ export function TaskModal({
         {error && <p className="text-xs text-destructive">{error}</p>}
 
         <div className="flex flex-col gap-4">
-          <button type="submit" disabled={saving} className="btn-base btn-primary w-full">
-            {task ? "Save changes" : "Create task"}
-          </button>
-          <button type="button" onClick={onClose} className="btn-base btn-ghost w-full">
-            Cancel
+          {canEdit && (
+            <button type="submit" disabled={saving} className="btn-base btn-primary w-full">
+              {task ? "Save changes" : "Create task"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className={`btn-base w-full ${canEdit ? "btn-ghost" : "btn-primary"}`}
+          >
+            {canEdit ? "Cancel" : "Close"}
           </button>
         </div>
 
-        {task && canDelete && onDelete && (
+        {task && canEdit && onDelete && (
           <div className="border-t border-border pt-4">
             <button
               type="button"

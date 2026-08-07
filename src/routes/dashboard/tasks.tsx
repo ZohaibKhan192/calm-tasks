@@ -207,7 +207,7 @@ function TasksPage() {
       {creating && (
         <TaskModal
           members={members ?? []}
-          canDelete={false}
+          canEdit
           saving={createTask.isPending}
           onClose={() => setCreating(false)}
           onSave={(input) => {
@@ -220,14 +220,10 @@ function TasksPage() {
         <TaskModal
           task={editing}
           members={members ?? []}
-          canDelete={canEdit(editing)}
+          canEdit={canEdit(editing)}
           saving={updateTask.isPending}
           onClose={() => setEditing(null)}
           onSave={(input) => {
-            if (!canEdit(editing)) {
-              setEditing(null);
-              return;
-            }
             updateTask.mutate({ id: editing.id, ...input }, { onSuccess: () => setEditing(null) });
           }}
           onDelete={() => {
