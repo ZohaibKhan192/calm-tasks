@@ -32,11 +32,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               id: u.id,
               email: u.email ?? null,
               name:
-                (u.user_metadata?.full_name as string) ??
-                (u.user_metadata?.name as string) ??
+                (u.user_metadata?.["full_name"] as string) ??
+                (u.user_metadata?.["name"] as string) ??
                 u.email ??
                 "User",
-              avatar_url: (u.user_metadata?.avatar_url as string) ?? null,
+              avatar_url: (u.user_metadata?.["avatar_url"] as string) ?? null,
             },
             { onConflict: "id" },
           );
