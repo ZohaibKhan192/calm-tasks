@@ -46,24 +46,65 @@ export type Database = {
           },
         ]
       }
+      join_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          org_id: string
+          status: Database["public"]["Enums"]["join_request_status"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          org_id: string
+          status?: Database["public"]["Enums"]["join_request_status"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          org_id?: string
+          status?: Database["public"]["Enums"]["join_request_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "join_requests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string
           id: string
           name: string
           owner_id: string
+          visibility: Database["public"]["Enums"]["org_visibility"]
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
           owner_id: string
+          visibility?: Database["public"]["Enums"]["org_visibility"]
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
           owner_id?: string
+          visibility?: Database["public"]["Enums"]["org_visibility"]
         }
         Relationships: []
       }
@@ -146,13 +187,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_join_request: { Args: { _request: string }; Returns: undefined }
       is_org_manager: { Args: { _org: string }; Returns: boolean }
       is_org_member: { Args: { _org: string }; Returns: boolean }
       join_org: { Args: { _org: string }; Returns: string }
+      reject_join_request: { Args: { _request: string }; Returns: undefined }
       shares_org: { Args: { _user: string }; Returns: boolean }
     }
     Enums: {
       app_role: "OWNER" | "ADMIN" | "MEMBER"
+      join_request_status: "PENDING" | "APPROVED" | "REJECTED"
+      org_visibility: "PUBLIC" | "PRIVATE"
       task_priority: "LOW" | "MEDIUM" | "HIGH"
       task_status: "TODO" | "IN_PROGRESS" | "DONE"
     }
@@ -283,6 +328,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["OWNER", "ADMIN", "MEMBER"],
+      join_request_status: ["PENDING", "APPROVED", "REJECTED"],
+      org_visibility: ["PUBLIC", "PRIVATE"],
       task_priority: ["LOW", "MEDIUM", "HIGH"],
       task_status: ["TODO", "IN_PROGRESS", "DONE"],
     },

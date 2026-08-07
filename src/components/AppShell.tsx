@@ -131,7 +131,9 @@ function InvitePanel() {
       {open && org && (
         <div className="mt-2 rounded-md border border-border bg-background p-3">
           <p className="text-xs text-muted-foreground">
-            Share this workspace code. Teammates sign in, then join with the code.
+            {org.visibility === "PUBLIC"
+              ? "Share this code. Anyone who has it joins immediately."
+              : "Share this code. Requests appear on the Team page for you to approve."}
           </p>
           <div className="mt-2 flex items-center gap-2">
             <code className="flex-1 truncate rounded-sm border border-border bg-surface px-2 py-1 text-xs text-foreground">

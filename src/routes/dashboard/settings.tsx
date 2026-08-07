@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/Modal";
 import { supabase } from "@/integrations/supabase/client";
-import { useOrg } from "@/lib/org";
+import { useOrg, type Visibility } from "@/lib/org";
 
 export const Route = createFileRoute("/dashboard/settings")({
   head: () => ({
@@ -23,11 +23,17 @@ export const Route = createFileRoute("/dashboard/settings")({
   component: SettingsPage,
 });
 
+const VISIBILITY_HELP: Record<Visibility, string> = {
+  PRIVATE: "People who have the code must be approved by an owner or admin before they join.",
+  PUBLIC: "Anyone who has the code joins immediately, with no approval step.",
+};
+
 function SettingsPage() {
   const { org } = useOrg();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [name, setName] = useState(org?.name ?? "");
+  const [visibility, setVisibility] = useState<Visibility>(org?.visibility ?? "PRIVATE");
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -35,6 +41,7 @@ function SettingsPage() {
   const isOwner = org?.role === "OWNER";
 
   useEffect(() => setName(org?.name ?? ""), [org?.name]);
+  useEffect(() => setVisibility(org?.visibility ?? "PRIVATE"), [org?.visibility]);
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +49,7 @@ function SettingsPage() {
     setError(null);
     const { error: updateError } = await supabase
       .from("organizations")
-      .update({ name: name.trim() })
+      .update({ name: name.trim(), visibility })
       .eq("id", org!.id);
     if (updateError) {
       setError("We couldn't save your changes.");
@@ -84,6 +91,31 @@ function SettingsPage() {
             onChange={(e) => setName(e.target.value)}
           />
         </div>
+        <div>
+          <span className="mb-2 block text-xs text-muted-foreground">Who can join</span>
+          <div className="flex flex-col gap-2">
+            {(["PRIVATE", "PUBLIC"] as Visibility[]).map((v) => (
+              <label key={v} className="flex items-start gap-2 text-sm text-foreground">
+                <input
+                  type="radio"
+                  name="visibility"
+                  value={v}
+                  checked={visibility === v}
+                  disabled={!isOwner}
+                  onChange={() => setVisibility(v)}
+                  className="mt-1"
+                />
+                <span>
+                  {v === "PRIVATE" ? "Private" : "Public"}
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {VISIBILITY_HELP[v]}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         {isOwner && (
           <button type="submit" className="btn-base btn-primary w-40">
             Save changes
@@ -96,6 +128,11 @@ function SettingsPage() {
         <code className="block rounded-md border border-border bg-surface px-3 py-2 text-xs text-foreground">
           {org?.id}
         </code>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {org?.visibility === "PUBLIC"
+            ? "Anyone with this code joins immediately."
+            : "People with this code have to be approved on the Team page."}
+        </p>
       </div>
 
       <div className="mt-8">

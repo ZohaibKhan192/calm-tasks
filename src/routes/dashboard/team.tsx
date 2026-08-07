@@ -4,7 +4,13 @@ import { Avatar } from "@/components/Avatar";
 import { Skeleton } from "@/components/Skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useMembers, useOrg, type Role } from "@/lib/org";
+import {
+  useDecideJoinRequest,
+  useJoinRequests,
+  useMembers,
+  useOrg,
+  type Role,
+} from "@/lib/org";
 import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/dashboard/team")({
@@ -34,6 +40,23 @@ function TeamPage() {
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const isManager = org?.role === "OWNER" || org?.role === "ADMIN";
+  const { data: requests } = useJoinRequests(isManager ? org?.id : undefined);
+  const decide = useDecideJoinRequest();
+
+  const decideRequest = (id: string, approve: boolean) => {
+    setError(null);
+    decide.mutate(
+      { id, approve },
+      {
+        onError: () =>
+          setError(
+            approve
+              ? "We couldn't approve that request."
+              : "We couldn't reject that request.",
+          ),
+      },
+    );
+  };
 
   const changeRole = async (id: string, role: Role) => {
     setError(null);
@@ -64,7 +87,52 @@ function TeamPage() {
 
       {error && <p className="mt-8 text-sm text-destructive">{error}</p>}
 
-      <div className="mt-8 rounded-md border border-border">
+      {isManager && requests && requests.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-sm font-semibold text-foreground">
+            Requests to join ({requests.length})
+          </h2>
+          <div className="mt-4 rounded-md border border-border">
+            {requests.map((r, i) => (
+              <div
+                key={r.id}
+                className={`flex items-center justify-between gap-4 p-4 ${
+                  i > 0 ? "border-t border-border" : ""
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <Avatar name={r.name} email={r.email} url={r.avatar_url} size={32} />
+                  <div>
+                    <p className="text-sm text-foreground">{r.name || r.email}</p>
+                    <p className="text-xs text-muted-foreground">{r.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    disabled={decide.isPending}
+                    onClick={() => decideRequest(r.id, false)}
+                    className="text-xs font-medium text-muted-foreground hover:underline"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    disabled={decide.isPending}
+                    onClick={() => decideRequest(r.id, true)}
+                    className="btn-base btn-primary h-8 px-3 text-xs"
+                  >
+                    Approve
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <h2 className="mt-8 text-sm font-semibold text-foreground">Members</h2>
+      <div className="mt-4 rounded-md border border-border">
         {isLoading ? (
           <div className="flex flex-col gap-4 p-4">
             <Skeleton className="h-8 w-full" />
