@@ -148,6 +148,7 @@ export type Database = {
     Functions: {
       is_org_manager: { Args: { _org: string }; Returns: boolean }
       is_org_member: { Args: { _org: string }; Returns: boolean }
+      join_org: { Args: { _org: string }; Returns: string }
       shares_org: { Args: { _user: string }; Returns: boolean }
     }
     Enums: {
