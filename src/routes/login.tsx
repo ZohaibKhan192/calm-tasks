@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/lib/auth";
+import { useMyOrgs } from "@/lib/org";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -23,13 +24,17 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const { session, loading } = useAuth();
+  const { data: orgs, isLoading: orgsLoading } = useMyOrgs();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && session) void navigate({ to: "/setup" });
-  }, [loading, session, navigate]);
+    if (!loading && session && !orgsLoading) {
+      const redirectTo = orgs && orgs.length > 0 ? "/dashboard/tasks" : "/setup";
+      void navigate({ to: redirectTo });
+    }
+  }, [loading, session, orgsLoading, orgs, navigate]);
 
   const signIn = async () => {
     setBusy(true);
