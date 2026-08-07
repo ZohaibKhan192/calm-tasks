@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SetupRouteImport } from './routes/setup'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard/settings'
 import { Route as DashboardTasksRouteImport } from './routes/dashboard/tasks'
@@ -36,6 +37,11 @@ const LoginRoute = LoginRouteImport.update({
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
+  '/signup': typeof SignupRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/tasks': typeof DashboardTasksRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
+  '/signup': typeof SignupRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/tasks': typeof DashboardTasksRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
+  '/signup': typeof SignupRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/tasks': typeof DashboardTasksRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/setup'
+    | '/signup'
     | '/auth/callback'
     | '/dashboard/settings'
     | '/dashboard/tasks'
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/setup'
+    | '/signup'
     | '/auth/callback'
     | '/dashboard/settings'
     | '/dashboard/tasks'
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/setup'
+    | '/signup'
     | '/auth/callback'
     | '/dashboard/settings'
     | '/dashboard/tasks'
@@ -128,6 +140,7 @@ export interface RootRouteChildren {
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
   SetupRoute: typeof SetupRoute
+  SignupRoute: typeof SignupRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
@@ -159,6 +172,13 @@ declare module '@tanstack/react-router' {
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/callback': {
@@ -213,6 +233,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
   LoginRoute: LoginRoute,
   SetupRoute: SetupRoute,
+  SignupRoute: SignupRoute,
   AuthCallbackRoute: AuthCallbackRoute,
 }
 export const routeTree = rootRouteImport

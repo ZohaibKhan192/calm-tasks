@@ -1,8 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth";
-import { useMyOrgs } from "@/lib/org";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { AuthCard } from "@/components/AuthCard";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -23,53 +20,19 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { session, loading } = useAuth();
-  const { data: orgs, isLoading: orgsLoading } = useMyOrgs();
-  const navigate = useNavigate();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!loading && session && !orgsLoading) {
-      const redirectTo = orgs && orgs.length > 0 ? "/dashboard/tasks" : "/setup";
-      void navigate({ to: redirectTo });
-    }
-  }, [loading, session, orgsLoading, orgs, navigate]);
-
-  const signIn = async () => {
-    setBusy(true);
-    setError(null);
-    const { error: err } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (err) {
-      setError("We couldn't sign you in. Please try again.");
-      setBusy(false);
-    }
-  };
-
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-6">
-      <div className="w-full max-w-[400px]">
-        <p className="text-sm font-semibold text-foreground">Task CRM</p>
-        <h1 className="mt-8 text-2xl font-semibold text-foreground">Sign in</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Sign in with your Google account</p>
-        <button
-          type="button"
-          onClick={() => void signIn()}
-          disabled={busy}
-          className="btn-base btn-primary mt-6 w-full"
-        >
-          {busy ? "Signing in…" : "Sign in with Google"}
-        </button>
-        {error && <p className="mt-4 text-xs text-destructive">{error}</p>}
-        <p className="mt-8 text-xs text-muted-foreground">
-          By continuing you agree to keep your workspace data tidy.
-        </p>
-      </div>
-    </div>
+    <AuthCard
+      heading="Sign in"
+      subheading="Welcome back. Use the Google account you signed up with."
+      buttonLabel="Continue with Google"
+      footer={
+        <>
+          Don&apos;t have an account?{" "}
+          <Link to="/signup" className="font-medium text-primary hover:underline">
+            Create one
+          </Link>
+        </>
+      }
+    />
   );
 }
