@@ -51,10 +51,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    void supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    // getSession() only reads localStorage, so a deleted or banned user keeps a
+    // "valid" session until their stateless JWT expires -- up to an hour of the
+    // app happily re-creating their profile row. getUser() asks the server, so
+    // the session is dropped on the next load instead.
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        setLoading(false);
+        return;
+      }
+      const { error } = await supabase.auth.getUser();
+      if (error) {
+        await supabase.auth.signOut();
+        setSession(null);
+      } else {
+        setSession(data.session);
+      }
       setLoading(false);
-    });
+    })();
 
     return () => sub.subscription.unsubscribe();
   }, []);

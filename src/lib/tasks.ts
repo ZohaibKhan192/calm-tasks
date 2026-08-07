@@ -8,7 +8,8 @@ export type Priority = "LOW" | "MEDIUM" | "HIGH";
 export type Task = {
   id: string;
   org_id: string;
-  created_by: string;
+  /** Null once the author's account is deleted -- the task itself survives. */
+  created_by: string | null;
   title: string;
   description: string | null;
   status: Status;
