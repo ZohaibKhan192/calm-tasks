@@ -64,7 +64,13 @@ export function AuthCard({
     setError(null);
     const { error: err } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        // Without this, Google silently reuses an existing session and skips the
+        // chooser, so anyone with more than one account cannot pick which to use
+        // -- it looks as though the OAuth page never appeared.
+        queryParams: { prompt: "select_account" },
+      },
     });
     // On success the browser leaves for Google, so this only runs on failure.
     if (err) {
