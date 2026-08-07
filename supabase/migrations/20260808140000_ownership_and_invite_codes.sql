@@ -121,7 +121,10 @@ END; $$;
 REVOKE EXECUTE ON FUNCTION public.join_by_code(text) FROM anon, public;
 REVOKE EXECUTE ON FUNCTION public.rotate_invite_code(uuid) FROM anon, public;
 REVOKE EXECUTE ON FUNCTION public.transfer_ownership(uuid, uuid) FROM anon, public;
-REVOKE EXECUTE ON FUNCTION public.generate_invite_code() FROM anon, authenticated, public;
+REVOKE EXECUTE ON FUNCTION public.generate_invite_code() FROM anon, public;
+-- authenticated must keep this one: it is the DEFAULT for organizations.invite_code,
+-- and a column default is evaluated with the privileges of the INSERTing role.
+GRANT EXECUTE ON FUNCTION public.generate_invite_code() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.join_by_code(text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rotate_invite_code(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.transfer_ownership(uuid, uuid) TO authenticated;

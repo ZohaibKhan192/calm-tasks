@@ -1,0 +1,16 @@
+-- Fixes 403 on workspace creation, introduced by 20260808140000.
+--
+-- That migration revoked EXECUTE on generate_invite_code() from authenticated
+-- while also using it as the DEFAULT for organizations.invite_code. A column
+-- default is evaluated with the privileges of the INSERTing role, so every
+-- create-workspace call hit "permission denied for function" -- surfacing as a
+-- 403 on POST /rest/v1/organizations.
+--
+-- This is the same trap as 20260807150433: SECURITY DEFINER governs a function
+-- body, never the right to call it, and revoking EXECUTE breaks every place
+-- Postgres evaluates the function on the caller's behalf -- policy expressions
+-- and column defaults alike.
+--
+-- Granting it back exposes nothing: the function reads no tables, takes no
+-- arguments, and returns a random string.
+GRANT EXECUTE ON FUNCTION public.generate_invite_code() TO authenticated;
