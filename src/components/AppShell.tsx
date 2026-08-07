@@ -78,8 +78,8 @@ function UserMenu() {
       >
         <Avatar
           name={name}
-          email={user?.email}
-          url={user?.user_metadata?.["avatar_url"] as string}
+          email={user?.email ?? null}
+          url={(user?.user_metadata?.["avatar_url"] as string) ?? null}
           size={24}
         />
         <ChevronDown size={14} className="text-muted-foreground" />
