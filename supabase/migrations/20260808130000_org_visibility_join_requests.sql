@@ -141,6 +141,14 @@ BEGIN
   WHERE id = _request;
 END; $$;
 
+-- The policies above call these three, and a policy expression is evaluated as
+-- the invoking role -- so without EXECUTE, enabling RLS on join_requests makes
+-- the approval list unreadable and the "waiting for approval" screen blank.
+-- 20260808120000 grants these too; repeated here so this migration stands alone.
+GRANT EXECUTE ON FUNCTION public.is_org_member(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_org_manager(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.shares_org(uuid) TO authenticated;
+
 -- These are called from the browser, so authenticated needs EXECUTE. Revoking it
 -- is what broke every RLS policy in 20260807150433.
 REVOKE EXECUTE ON FUNCTION public.join_org(uuid) FROM anon, public;
