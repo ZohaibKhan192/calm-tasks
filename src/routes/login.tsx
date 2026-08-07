@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { lovable } from "@/integrations/lovable/index";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useMyOrgs } from "@/lib/org";
 
@@ -39,16 +39,16 @@ function LoginPage() {
   const signIn = async () => {
     setBusy(true);
     setError(null);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: `${window.location.origin}/auth/callback`,
+    const { error: err } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
-    if (result.error) {
+    if (err) {
       setError("We couldn't sign you in. Please try again.");
       setBusy(false);
-      return;
     }
-    if (result.redirected) return;
-    void navigate({ to: "/setup" });
   };
 
   return (
