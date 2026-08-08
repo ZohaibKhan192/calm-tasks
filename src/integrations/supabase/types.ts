@@ -89,6 +89,7 @@ export type Database = {
           created_at: string
           id: string
           invite_code: string
+          logo_url: string | null
           name: string
           owner_id: string
           visibility: Database["public"]["Enums"]["org_visibility"]
@@ -97,6 +98,7 @@ export type Database = {
           created_at?: string
           id?: string
           invite_code?: string
+          logo_url?: string | null
           name: string
           owner_id: string
           visibility?: Database["public"]["Enums"]["org_visibility"]
@@ -105,6 +107,7 @@ export type Database = {
           created_at?: string
           id?: string
           invite_code?: string
+          logo_url?: string | null
           name?: string
           owner_id?: string
           visibility?: Database["public"]["Enums"]["org_visibility"]
@@ -195,7 +198,9 @@ export type Database = {
       is_org_member: { Args: { _org: string }; Returns: boolean }
       join_by_code: { Args: { _code: string }; Returns: Json }
       reject_join_request: { Args: { _request: string }; Returns: undefined }
+      org_id_from_path: { Args: { _name: string }; Returns: string }
       rotate_invite_code: { Args: { _org: string }; Returns: string }
+      set_org_logo: { Args: { _org: string; _url: string | null }; Returns: undefined }
       shares_org: { Args: { _user: string }; Returns: boolean }
       transfer_ownership: { Args: { _org: string; _to: string }; Returns: undefined }
     }

@@ -13,8 +13,14 @@ export type Org = {
   owner_id: string;
   visibility: Visibility;
   invite_code: string;
+  logo_url: string | null;
   role: Role;
 };
+
+/** Bucket created by the org_logo migration. Public read, manager-only write. */
+export const LOGO_BUCKET = "org-logos";
+export const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+export const LOGO_MIME_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
 
 /** Result of join_by_code(): straight in, or waiting on a manager. */
 export type JoinOutcome = "JOINED" | "PENDING";
@@ -57,7 +63,7 @@ export function useMyOrgs() {
       if (ids.length === 0) return [];
       const { data: orgs, error: orgErr } = await supabase
         .from("organizations")
-        .select("id, name, owner_id, visibility, invite_code")
+        .select("id, name, owner_id, visibility, invite_code, logo_url")
         .in("id", ids)
         .order("created_at", { ascending: true });
       if (orgErr) throw orgErr;
@@ -193,6 +199,48 @@ export function useRotateInviteCode() {
       const { data, error } = await supabase.rpc("rotate_invite_code", { _org: orgId });
       if (error) throw error;
       return data as string;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["orgs"] }),
+  });
+}
+
+/**
+ * Uploads a logo and points the org at it. Managers only, enforced twice: the
+ * storage policies gate the file, set_org_logo() gates the column.
+ *
+ * The object path is fixed at <orgId>/logo so replacing a logo overwrites rather
+ * than accumulating dead files. That makes the public URL stable, which the CDN
+ * would happily keep serving, so a version query string busts the cache.
+ */
+export function useSetOrgLogo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ orgId, file }: { orgId: string; file: File }) => {
+      const path = `${orgId}/logo`;
+      const { error: uploadErr } = await supabase.storage
+        .from(LOGO_BUCKET)
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadErr) throw uploadErr;
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path);
+      const url = `${publicUrl}?v=${Date.now()}`;
+      const { error } = await supabase.rpc("set_org_logo", { _org: orgId, _url: url });
+      if (error) throw error;
+      return url;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["orgs"] }),
+  });
+}
+
+/** Clears the column and removes the file, so storage does not keep the image. */
+export function useRemoveOrgLogo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (orgId: string) => {
+      const { error } = await supabase.rpc("set_org_logo", { _org: orgId, _url: null });
+      if (error) throw error;
+      await supabase.storage.from(LOGO_BUCKET).remove([`${orgId}/logo`]);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["orgs"] }),
   });

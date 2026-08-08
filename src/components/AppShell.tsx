@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Check, ChevronDown, ListChecks, Settings, UserPlus, Users, Copy } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Avatar } from "@/components/Avatar";
+import { OrgLogo } from "@/components/OrgLogo";
 import { useAuth } from "@/lib/auth";
 import { useOrg } from "@/lib/org";
 
@@ -29,7 +30,10 @@ function OrgSwitcher() {
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm font-medium text-foreground hover:bg-hover"
       >
-        <span className="truncate">{org?.name ?? "No workspace"}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <OrgLogo name={org?.name} url={org?.logo_url} size={20} />
+          <span className="truncate">{org?.name ?? "No workspace"}</span>
+        </span>
         <ChevronDown size={16} className="shrink-0 text-muted-foreground" />
       </button>
       {open && (
@@ -44,7 +48,10 @@ function OrgSwitcher() {
               }}
               className="flex w-full items-center justify-between rounded-sm px-2 py-2 text-left text-sm text-foreground hover:bg-hover"
             >
-              <span className="truncate">{o.name}</span>
+              <span className="flex min-w-0 items-center gap-2">
+                <OrgLogo name={o.name} url={o.logo_url} size={20} />
+                <span className="truncate">{o.name}</span>
+              </span>
               {o.id === org?.id && <Check size={14} className="text-muted-foreground" />}
             </button>
           ))}
@@ -176,7 +183,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">{org?.name}</span>
+          <span className="flex items-center gap-2 text-sm text-muted-foreground">
+            {org && <OrgLogo name={org.name} url={org.logo_url} size={20} />}
+            {org?.name}
+          </span>
           <UserMenu />
         </div>
       </header>

@@ -1,12 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Modal } from "@/components/Modal";
+import { OrgLogo } from "@/components/OrgLogo";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  LOGO_MAX_BYTES,
+  LOGO_MIME_TYPES,
   useMembers,
   useOrg,
+  useRemoveOrgLogo,
   useRotateInviteCode,
+  useSetOrgLogo,
   useTransferOwnership,
   type Visibility,
 } from "@/lib/org";
@@ -48,6 +53,9 @@ function SettingsPage() {
   const isManager = isOwner || org?.role === "ADMIN";
 
   const { data: members } = useMembers(org?.id);
+  const setLogo = useSetOrgLogo();
+  const removeLogo = useRemoveOrgLogo();
+  const logoInput = useRef<HTMLInputElement>(null);
   const rotate = useRotateInviteCode();
   const transfer = useTransferOwnership();
   const [transferTo, setTransferTo] = useState("");
@@ -56,6 +64,38 @@ function SettingsPage() {
   // Everyone except the current owner, who cannot receive their own workspace.
   const transferCandidates = (members ?? []).filter((m) => m.user_id !== org?.owner_id);
   const transferTarget = transferCandidates.find((m) => m.user_id === transferTo);
+
+  // Checked here as well as in the bucket config so an oversized file fails
+  // instantly with a readable reason rather than after a 2 MB upload.
+  const pickLogo = (file: File | undefined) => {
+    setStatus(null);
+    setError(null);
+    if (!file) return;
+    if (!LOGO_MIME_TYPES.includes(file.type)) {
+      setError("Use a PNG, JPG, WEBP or SVG image.");
+      return;
+    }
+    if (file.size > LOGO_MAX_BYTES) {
+      setError("That image is over 2 MB. Try a smaller one.");
+      return;
+    }
+    setLogo.mutate(
+      { orgId: org!.id, file },
+      {
+        onSuccess: () => setStatus("Logo updated."),
+        onError: () => setError("We couldn't upload that image."),
+      },
+    );
+  };
+
+  const clearLogo = () => {
+    setStatus(null);
+    setError(null);
+    removeLogo.mutate(org!.id, {
+      onSuccess: () => setStatus("Logo removed."),
+      onError: () => setError("We couldn't remove the logo."),
+    });
+  };
 
   const rotateCode = () => {
     setStatus(null);
@@ -122,6 +162,55 @@ function SettingsPage() {
   return (
     <div className="max-w-[600px]">
       <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+
+      <div className="mt-8">
+        <p className="mb-2 text-xs text-muted-foreground">Logo</p>
+        <div className="flex items-center gap-4">
+          <OrgLogo name={org?.name} url={org?.logo_url} size={64} />
+          {isManager ? (
+            <div className="flex items-center gap-4">
+              <input
+                ref={logoInput}
+                type="file"
+                accept={LOGO_MIME_TYPES.join(",")}
+                className="hidden"
+                onChange={(e) => {
+                  pickLogo(e.target.files?.[0]);
+                  // Reset so re-picking the same file fires change again.
+                  e.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                disabled={setLogo.isPending}
+                onClick={() => logoInput.current?.click()}
+                className="btn-base btn-ghost"
+              >
+                {setLogo.isPending ? "Uploading…" : org?.logo_url ? "Replace" : "Upload"}
+              </button>
+              {org?.logo_url && (
+                <button
+                  type="button"
+                  disabled={removeLogo.isPending}
+                  onClick={clearLogo}
+                  className="text-xs font-medium text-destructive hover:underline"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Only an owner or admin can change the logo.
+            </p>
+          )}
+        </div>
+        {isManager && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            PNG, JPG, WEBP or SVG, up to 2 MB. A square image works best.
+          </p>
+        )}
+      </div>
 
       <form onSubmit={save} className="mt-8 flex flex-col gap-4">
         <div>
@@ -231,8 +320,8 @@ function SettingsPage() {
             </div>
           )}
           <p className="mt-2 text-xs text-muted-foreground">
-            They become the owner and you become an admin. Only the owner can rename, change who
-            can join, or delete a workspace.
+            They become the owner and you become an admin. Only the owner can rename, change who can
+            join, or delete a workspace.
           </p>
         </div>
       )}
