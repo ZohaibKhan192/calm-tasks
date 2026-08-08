@@ -83,7 +83,10 @@ function SettingsPage() {
       { orgId: org!.id, file },
       {
         onSuccess: () => setStatus("Logo updated."),
-        onError: () => setError("We couldn't upload that image."),
+        // Storage and PostgREST both explain a 400 in the response body, and the
+        // reason is usually actionable (missing bucket, blocked mime type), so
+        // show it rather than a generic apology.
+        onError: (e) => setError(`We couldn't upload that image. ${e.message}`),
       },
     );
   };
