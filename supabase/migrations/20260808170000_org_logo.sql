@@ -8,24 +8,35 @@
 -- on that table), so admins cannot be given a blanket UPDATE. set_org_logo() is
 -- the narrow door: it writes exactly one column and checks is_org_manager first.
 
-ALTER TABLE public.organizations ADD COLUMN logo_url text;
+-- IF NOT EXISTS so a partial first run can be repaired by re-running the file.
+-- Without it, a re-run aborts on this line and nothing below it applies.
+ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS logo_url text;
 
 -- Storage. -------------------------------------------------------------------
 
 -- Public bucket: a logo is not a secret, and public reads are served straight
 -- from the CDN without a signed URL per render. Writes are still policy-gated.
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'org-logos',
-  'org-logos',
-  true,
-  2097152, -- 2 MB
-  ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
-)
-ON CONFLICT (id) DO UPDATE
-  SET public = true,
-      file_size_limit = EXCLUDED.file_size_limit,
-      allowed_mime_types = EXCLUDED.allowed_mime_types;
+-- Some projects deny writes to storage.buckets from the SQL editor. That must not
+-- abort the policies below, so it is caught: create the bucket in the dashboard
+-- instead and everything else still applies.
+DO $$
+BEGIN
+  INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  VALUES (
+    'org-logos',
+    'org-logos',
+    true,
+    2097152, -- 2 MB
+    ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
+  )
+  ON CONFLICT (id) DO UPDATE
+    SET public = true,
+        file_size_limit = EXCLUDED.file_size_limit,
+        allowed_mime_types = EXCLUDED.allowed_mime_types;
+EXCEPTION WHEN insufficient_privilege THEN
+  RAISE WARNING 'Could not write storage.buckets; create the org-logos bucket in the dashboard (public, 2 MB).';
+END;
+$$;
 
 -- Objects live at <org_id>/logo, so the first path segment is the org. A file
 -- uploaded with a non-uuid first segment must not raise 22P02 out of a policy,
